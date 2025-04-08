@@ -6,7 +6,7 @@ use regex::Regex;
 
 fn main() {
     bench("part1", || mul_corr_memo());
-    mul_corr_memo_do_dont();
+    bench("part2", || mul_corr_memo_do_dont());
 }
 
 fn mul_corr_memo() -> u32 {
@@ -47,17 +47,29 @@ fn mul_corr_memo_do_dont() -> u32 {
     let input = fs::read_to_string("input.txt")
     .expect("Failed to read input file");
 
-    let re = Regex::new(r"do\(\)don\'tmul\(\d{1,3},\d{1,3}\)").unwrap(); 
+    let re = Regex::new(r"(mul\(\d{1,3},\d{1,3}\)|do(n't)?\(\))").unwrap(); 
 
     let matches: Vec<&str> = re
         .find_iter(&input)
         .map(|m| m.as_str())
         .collect();
 
-    println!("{:?}", matches);
+    let mut valid_instruction = vec![];
+    let mut is_do = true;
 
-    let matches_str = matches.join(",");
+    for m in matches {
+        match m {
+            "don't()" => is_do = false,
+            "do()" => is_do = true,
+            _ => (),
+        }
 
+        if is_do {
+            valid_instruction.push(m);
+        }
+    }
+
+    let matches_str = valid_instruction.join(",");
     let re_ope = Regex::new(r"\d{1,3},\d{1,3}").unwrap();
 
     let matche_ope: Vec<(u32, u32)> = re_ope
@@ -77,6 +89,7 @@ fn mul_corr_memo_do_dont() -> u32 {
         .map(|e| e.0 * e.1)
         .sum();
     result
+
 }
 
 
@@ -99,5 +112,7 @@ mod tests {
 
     #[test]
     fn test_part2() {
+        let result = mul_corr_memo_do_dont();
+        assert_eq!(87163705, result);
     }
 }
