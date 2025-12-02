@@ -1,4 +1,5 @@
 use std::{fs, time::Instant};
+use rayon::prelude::*;
 
 fn main() {
     let content = fs::read_to_string("input.txt").expect("File expected");
@@ -10,31 +11,45 @@ fn main() {
         .flatten()
         .collect();
     
-    bench("part_1", || search_invalid_ids(&ranges, check_reverse));
-    bench("part_2", || search_invalid_ids(&ranges, check_repated));
+    bench("part_1 as parallel:", || sum_invalid_ids_parallel_part1(&ranges));
+    bench("part_2 as parallel:", || sum_invalid_ids_parallel_part2(&ranges));
+
 }
 
+fn sum_invalid_ids_parallel_part1(ranges: &[&str]) -> i64 {
+    ranges
+        .par_iter()
+        .map(|r| search_invalid_ids_parallel(r, check_reverse))
+        .sum()
+}
 
-fn search_invalid_ids<F>(ranges: &[&str], checker: F) -> i64 
+fn sum_invalid_ids_parallel_part2(ranges: &[&str]) -> i64 {
+    ranges
+        .par_iter()
+        .map(|r| search_invalid_ids_parallel(r, check_repated))
+        .sum()
+}
+
+fn search_invalid_ids_parallel<F>(range: &str, checker: F) -> i64 
     where 
         F: Fn(&str) -> bool, {
 
     let mut invalid_ids_sum = 0;
 
-    for range in ranges {
-        let (start_string, end_sring) = range.split_once("-").unwrap();
+    let (start_string, end_sring) = range.split_once("-").unwrap();
 
-        let start: i64 = start_string.parse().unwrap();
-        let end: i64 = end_sring.parse().unwrap();
+    let start: i64 = start_string.parse().unwrap();
+    let end: i64 = end_sring.parse().unwrap();
     
-        for number in start..(end + 1) {
-            if checker(&number.to_string()) {
-                invalid_ids_sum += number;
-            }
+    for number in start..(end + 1) {
+        if checker(&number.to_string()) {
+            invalid_ids_sum += number;
         }
-    }    
-   invalid_ids_sum
-}
+    }
+
+    invalid_ids_sum
+}    
+
 
 fn check_reverse(number_string: &str) -> bool {
     let right = &number_string[0.. (number_string.len() / 2)];
@@ -84,6 +99,7 @@ fn bench<F: FnOnce() -> i64>(name: &str, f: F) {
     println!("{}: took {:?}. result: {}.", name, duration, result);
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -98,7 +114,7 @@ mod tests {
                 .collect::<Vec<&str>>())
         .flatten()
         .collect();
-        let result = search_invalid_ids(&ranges, check_reverse);
+        let result = sum_invalid_ids_parallel_part1(&ranges);
         println!("test_part1 result: {}", result);
         assert_eq!(32976912643, result);
     }
@@ -113,7 +129,7 @@ mod tests {
                 .collect::<Vec<&str>>())
         .flatten()
         .collect();
-        let result = search_invalid_ids(&ranges, check_repated);
+        let result = sum_invalid_ids_parallel_part2(&ranges);
         println!("test_part2 result: {}", result);
         assert_eq!(54446379122, result);
     }
